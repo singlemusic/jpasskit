@@ -15,10 +15,12 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     permissions:
       contents: read
     steps:
+    - name: Keep Gradle's home in this job
+      run: echo "GRADLE_USER_HOME=$RUNNER_TEMP/gradle" >> "$GITHUB_ENV"
     - uses: actions/checkout@v4
     - name: Set up JDK 17
       uses: actions/setup-java@v4
@@ -60,13 +62,15 @@ jobs:
           **/build/reports/tests/test/
 
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     if: startsWith(github.ref, 'refs/tags/')
     needs: build
     environment: release
     permissions:
       contents: write
     steps:
+    - name: Keep Gradle's home in this job
+      run: echo "GRADLE_USER_HOME=$RUNNER_TEMP/gradle" >> "$GITHUB_ENV"
     - uses: actions/checkout@v4
     - name: Set up Java
       uses: actions/setup-java@v4
@@ -74,6 +78,7 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
         server-id: ossrh
+        settings-path: ${{ runner.temp }}
         server-username: MAVEN_USERNAME
         server-password: MAVEN_PASSWORD
         gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
@@ -107,13 +112,15 @@ jobs:
           out/jreleaser/output.properties
 
   snapshot-deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     if: github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/')
     needs: build
     environment: snapshot
     permissions:
       contents: read
     steps:
+      - name: Keep Gradle's home in this job
+        run: echo "GRADLE_USER_HOME=$RUNNER_TEMP/gradle" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -121,6 +128,7 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
           server-id: ossrh
+          settings-path: ${{ runner.temp }}
           server-username: MAVEN_USERNAME
           server-password: MAVEN_PASSWORD
           gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
